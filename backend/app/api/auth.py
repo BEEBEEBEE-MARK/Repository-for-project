@@ -23,7 +23,8 @@ router = APIRouter(prefix="/api/auth", tags=["认证"])
 USERNAME_PATTERN = re.compile(r"^[A-Za-z0-9_]{3,20}$")
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 PASSWORD_PATTERN = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9!@#$%^&*]{6,20}$")
-INVITE_PATTERN = re.compile(r"^[A-Za-z0-9]{6,20}$")
+# 允许连字符：默认邀请码 DEV-DEFAULT 及站长自定义码（如 WANG-001）
+INVITE_PATTERN = re.compile(r"^[A-Za-z0-9-]{6,20}$")
 
 RESERVED_USERNAMES = {"admin", "root", "administrator"}
 MAX_FAILED_ATTEMPTS = 5

@@ -197,7 +197,7 @@ const PATTERN = {
   email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   // 6-20 位，必须同时含字母和数字；允许字母、数字及常见特殊字符，不允许空格
   password: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9!@#$%^&*]{6,20}$/,
-  invite: /^[A-Za-z0-9]{6,20}$/,
+  invite: /^[A-Za-z0-9-]{6,20}$/,
 };
 const RESERVED_USERNAMES = ['admin', 'root', 'administrator'];
 

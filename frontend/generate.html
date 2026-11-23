@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>生成旅行计划 · 旅梦规划助手</title>
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/generate.css" />
+<script src="js/auth.js"></script>
+<script>
+  // 全局路由守卫：未登录访问自动跳转登录页（生成 PRD §1）
+  requireAuth();
+</script>
+</head>
+<body>
+
+<!-- 本页图标（顶部栏图标由 layout.js 注入） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.7 4.6L18.3 9.3l-4.6 1.7L12 15.6l-1.7-4.6-4.6-1.7 4.6-1.7L12 3z"/><path d="M19 15.5l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9z"/></symbol>
+  <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/><path d="M8 13.5h3M8 17h6"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.5-3.2 2.8-5 5.5-5s5 1.8 5.5 5"/><path d="M16 6.2a3 3 0 0 1 0 5.6M17 14.4c2 .6 3.3 2.2 3.7 4.6"/></symbol>
+  <symbol id="ic-yuan" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M9 8.5l3 3.5 3-3.5M12 12v4.5M9.4 13.6h5.2M9.4 15.4h5.2"/></symbol>
+  <symbol id="ic-chev-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="ic-chev-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4v5h-5"/></symbol>
+  <symbol id="ic-save" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4V4z"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M4 19h16"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="ic-bus" viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="14" rx="2"/><path d="M4 11h16M7 17.5V20M17 17.5V20"/><circle cx="8" cy="14.5" r="1"/><circle cx="16" cy="14.5" r="1"/></symbol>
+  <symbol id="ic-food" viewBox="0 0 24 24"><path d="M5 3v7a3 3 0 0 0 6 0V3M8 3v18M17 3c-1.8 1.5-2.5 3.5-2.5 6.5V12h4V3zM18.5 12v9"/></symbol>
+  <symbol id="ic-wallet" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M16.5 14.5h1.5"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 10v4M12 17h.01"/></symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></symbol>
+  <symbol id="ic-map" viewBox="0 0 24 24"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13l-6 2.5-6-2.5-6 2.5v-13z"/><path d="M9 4v13M15 6.5v13"/></symbol>
+  <symbol id="ic-hotel" viewBox="0 0 24 24"><path d="M3 20V9l9-5 9 5v11"/><path d="M2.5 20h19"/><path d="M9.5 20v-6h5v6"/><path d="M9 9h.01M15 9h.01"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+</defs></svg>
+
+<main class="page">
+  <!-- ==================== 视图一：表单 ==================== -->
+  <section id="view-form">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow" style="margin-bottom:8px">NEW PLAN</div>
+        <h1>生成旅行计划</h1>
+        <p>填好出行条件，AI 将为你生成结构化行程。带 * 为必填项</p>
+      </div>
+    </div>
+
+    <form id="plan-form" novalidate>
+      <div class="card">
+        <div class="section-title">01 / 出行条件</div>
+        <div class="form-grid">
+          <div class="field" id="field-departure">
+            <label class="field__label" for="departure">出发地<span class="field__required">*</span></label>
+            <div class="input-wrap">
+              <svg class="icon"><use href="#ic-bus"/></svg>
+              <input class="input input--icon" id="departure" maxlength="50" placeholder="例如：上海" />
+            </div>
+            <p class="field__error"></p>
+          </div>
+
+          <div class="field" id="field-destination">
+            <label class="field__label" for="destination">目的地<span class="field__required">*</span></label>
+            <div class="input-wrap">
+              <svg class="icon"><use href="#ic-pin"/></svg>
+              <input class="input input--icon" id="destination" maxlength="50" placeholder="例如：昆明；多个城市用顿号分隔" />
+            </div>
+            <p class="field__error"></p>
+            <p class="hint">支持多个城市，如「哈尔滨、长春、沈阳」，将自动生成城际交通</p>
+          </div>
+
+          <div class="field" id="field-days">
+            <label class="field__label" for="days">出行天数<span class="field__required">*</span></label>
+            <div class="input-wrap">
+              <svg class="icon"><use href="#ic-calendar"/></svg>
+              <input class="input input--icon" id="days" type="number" min="1" max="15" placeholder="1-15 天" />
+            </div>
+            <p class="field__error"></p>
+          </div>
+
+          <div class="field" id="field-start-date">
+            <label class="field__label" for="start-date">出发日期<span class="field__optional">（选填）</span></label>
+            <div class="input-wrap input-wrap--date">
+              <svg class="icon"><use href="#ic-calendar"/></svg>
+              <input class="input input--icon" id="start-date" placeholder="yyyy/mm/dd"
+                     maxlength="10" inputmode="numeric" autocomplete="off" />
+              <svg class="icon date-proxy-icon" aria-hidden="true"><use href="#ic-calendar"/></svg>
+              <input type="date" class="date-proxy" id="start-date-picker" tabindex="-1" aria-label="打开日历选择日期" />
+            </div>
+            <p class="field__error">请输入正确的日期格式（yyyy/mm/dd）</p>
+            <p class="hint">格式 yyyy/mm/dd，也可点击右侧图标选择；未填时按「第 1 天、第 2 天…」组织</p>
+          </div>
+
+          <div class="field" id="field-budget">
+            <label class="field__label" for="budget">人均预算<span class="field__required">*</span></label>
+            <div class="input-wrap">
+              <svg class="icon"><use href="#ic-yuan"/></svg>
+              <input class="input input--icon" id="budget" type="number" min="1" max="999999" placeholder="元 / 人" />
+            </div>
+            <p class="field__error"></p>
+          </div>
+
+          <div class="field" id="field-people">
+            <label class="field__label" for="people">人数<span class="field__required">*</span></label>
+            <div class="input-wrap">
+              <svg class="icon"><use href="#ic-users"/></svg>
+              <input class="input input--icon" id="people" type="number" min="1" max="20" value="2" />
+            </div>
+            <p class="field__error"></p>
+          </div>
+
+          <div class="field">
+            <label class="field__label">行程节奏</label>
+            <div class="chips" data-single id="pace-chips">
+              <span class="chip" data-value="宽松">宽松</span>
+              <span class="chip chip--active" data-value="适中">适中</span>
+              <span class="chip" data-value="紧凑">紧凑</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+        <div class="section-title">02 / 偏好与补充</div>
+        <div class="form-grid">
+          <div class="field field--full">
+            <label class="field__label">兴趣偏好 <span class="field__optional">可多选</span></label>
+            <div class="chips" data-multi id="interest-chips">
+              <span class="chip" data-value="历史文化">历史文化</span>
+              <span class="chip" data-value="自然风光">自然风光</span>
+              <span class="chip" data-value="美食">美食</span>
+              <span class="chip" data-value="亲子">亲子</span>
+              <span class="chip" data-value="购物">购物</span>
+              <span class="chip" data-value="夜生活">夜生活</span>
+              <span class="chip" data-value="摄影">摄影</span>
+              <span class="chip" data-value="休闲度假">休闲度假</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">交通偏好</label>
+            <div class="chips" data-single id="transport-chips">
+              <span class="chip" data-value="公共交通为主">公共交通为主</span>
+              <span class="chip" data-value="自驾">自驾</span>
+              <span class="chip" data-value="不限">不限</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field__label">住宿偏好</label>
+            <div class="chips" data-single id="hotel-chips">
+              <span class="chip" data-value="经济型">经济型</span>
+              <span class="chip" data-value="舒适型">舒适型</span>
+              <span class="chip" data-value="豪华型">豪华型</span>
+              <span class="chip" data-value="不限">不限</span>
+            </div>
+          </div>
+
+          <div class="field field--full">
+            <label class="field__label" for="special-needs">饮食 / 特殊需求 <span class="field__optional">（选填）</span></label>
+            <div class="textarea-wrap">
+              <textarea class="input" id="special-needs" maxlength="200" placeholder="例如：不吃辣、带老人出行希望少走路…"></textarea>
+              <span class="counter" id="note-counter">0/200</span>
+            </div>
+          </div>
+
+          <div class="field field--full">
+            <label class="field__label">参考攻略 <span class="field__optional">（选填 · 最多 3 条）</span></label>
+            <div class="acc" id="guide-acc">
+              <div class="acc__head" id="guide-toggle">
+                <svg class="icon"><use href="#ic-map"/></svg>
+                <span>添加参考攻略（链接或粘贴正文）</span>
+                <svg class="icon icon--sm acc__caret"><use href="#ic-chev-down"/></svg>
+              </div>
+              <div class="acc__body" id="guide-body" hidden>
+                <p class="hint" style="margin:6px 0 12px">链接仅作来源记录；粘贴的正文参与生成。系统会过滤广告与联系方式。</p>
+                <div id="guide-list">
+                  <div class="guide-item">
+                    <select class="guide-item__type">
+                      <option value="link">链接</option>
+                      <option value="text">文本</option>
+                    </select>
+                    <input class="guide-item__value" placeholder="粘贴链接或攻略正文（文本 ≤500 字）" />
+                    <button type="button" class="guide-item__remove" aria-label="删除这条参考攻略">
+                      <svg class="icon icon--sm"><use href="#ic-close"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <button type="button" class="btn btn--ghost btn--sm" id="btn-add-guide">
+                  <svg class="icon icon--sm"><use href="#ic-plus"/></svg>添加一条
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-foot">
+        <button type="submit" class="btn btn--primary" id="btn-generate">
+          <svg class="icon icon--sm"><use href="#ic-sparkles"/></svg>生成计划
+        </button>
+        <span class="form-foot__tip">生成需同步等待，通常 30–60 秒；过程中请勿关闭页面</span>
+      </div>
+    </form>
+  </section>
+
+  <!-- ==================== 视图二：结果 ==================== -->
+  <section id="view-result" hidden>
+    <div class="page-head">
+      <div>
+        <button type="button" class="back-link" id="btn-back">
+          <svg class="icon icon--sm"><use href="#ic-chev-left"/></svg>返回修改条件
+        </button>
+        <h1 id="result-title"></h1>
+        <p>AI 生成的行程方案 · 内容为估算，仅供参考</p>
+      </div>
+      <div class="head-actions">
+        <button type="button" class="btn btn--ghost" id="btn-supplement">
+          <svg class="icon icon--sm"><use href="#ic-plus"/></svg>补充攻略
+        </button>
+        <button type="button" class="btn btn--ghost" id="btn-regenerate">
+          <svg class="icon icon--sm"><use href="#ic-refresh"/></svg>重新生成
+        </button>
+        <button type="button" class="btn btn--primary" id="btn-save">
+          <svg class="icon icon--sm"><use href="#ic-save"/></svg>保存
+        </button>
+        <button type="button" class="btn btn--soft" id="btn-export" hidden>
+          <svg class="icon icon--sm"><use href="#ic-download"/></svg>导出 PDF
+        </button>
+      </div>
+    </div>
+    <div id="result-body"></div>
+  </section>
+</main>
+
+<!-- 生成中遮罩 -->
+<div class="loading-mask" id="loading-mask" hidden>
+  <div class="loading-box">
+    <div class="spinner"></div>
+    <h3>AI 正在规划你的行程…</h3>
+    <p>正在整理每日安排、预算与注意事项，通常需要 30–60 秒，请稍候</p>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/plan-render.js"></script>
+<script>
+/* ==========================================================================
+   旅行计划生成页
+   依据：需求文档/旅行计划生成-PRD.md v1.5、开发文档/接口文档.md v1.0
+   ========================================================================== */
+
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  formData: null,      // 本次生成的表单条件（保存与概览展示使用）
+  plan: null,          // 生成接口返回的数据
+  savedPlanId: null,   // 保存成功后的记录 ID（用于导出）
+  activeDay: 0,
+  generating: false,
+  saving: false,
+};
+
+/* ---------- 顶部栏 ---------- */
+mountTopbar();
+setTopbarUser(getUsername());
+
+/* ---------- 表单交互 ---------- */
+// 单选 / 多选 chips
+document.querySelectorAll('.chips').forEach((group) => {
+  group.addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+
+    if (group.hasAttribute('data-single')) {
+      group.querySelectorAll('.chip').forEach((item) => item.classList.remove('chip--active'));
+      chip.classList.add('chip--active');
+    } else {
+      chip.classList.toggle('chip--active');
+    }
+  });
+});
+
+// 特殊需求字数统计
+$('special-needs').addEventListener('input', () => {
+  $('note-counter').textContent = `${$('special-needs').value.length}/200`;
+});
+
+// 参考攻略：折叠
+$('guide-toggle').addEventListener('click', () => {
+  const acc = $('guide-acc');
+  const body = $('guide-body');
+  acc.classList.toggle('acc--open');
+  body.hidden = !acc.classList.contains('acc--open');
+});
+
+// 参考攻略：添加
+$('btn-add-guide').addEventListener('click', () => {
+  const items = $('guide-list').querySelectorAll('.guide-item');
+  if (items.length >= 3) {
+    toast('参考攻略最多 3 条，每条文本不超过 500 字');
+    return;
+  }
+  const item = document.createElement('div');
+  item.className = 'guide-item';
+  item.innerHTML = `
+    <select class="guide-item__type">
+      <option value="link">链接</option>
+      <option value="text">文本</option>
+    </select>
+    <input class="guide-item__value" placeholder="粘贴链接或攻略正文（文本 ≤500 字）" />
+    <button type="button" class="guide-item__remove" aria-label="删除这条参考攻略">
+      <svg class="icon icon--sm"><use href="#ic-close"/></svg>
+    </button>`;
+  $('guide-list').appendChild(item);
+});
+
+// 参考攻略：删除（事件委托）
+$('guide-list').addEventListener('click', (event) => {
+  const button = event.target.closest('.guide-item__remove');
+  if (!button) return;
+  const items = $('guide-list').querySelectorAll('.guide-item');
+  if (items.length <= 1) {
+    // 保留最后一条，仅清空内容
+    button.closest('.guide-item').querySelector('.guide-item__value').value = '';
+    return;
+  }
+  button.closest('.guide-item').remove();
+});
+
+// 参考攻略：文本超 500 字即时提示并截断（PRD 异常 #8）
+$('guide-list').addEventListener('input', (event) => {
+  const input = event.target.closest('.guide-item__value');
+  if (!input) return;
+  const select = input.parentElement.querySelector('.guide-item__type');
+  if (select && select.value === 'text' && input.value.length > 500) {
+    input.value = input.value.slice(0, 500);
+    toast('参考攻略最多 3 条，每条文本不超过 500 字');
+  }
+});
+
+// 输入时清除字段错误
+document.querySelectorAll('#view-form .input').forEach((input) => {
+  input.addEventListener('input', () => {
+    const field = input.closest('.field');
+    if (field) field.classList.remove('field--invalid');
+  });
+});
+
+/* ---------- 表单校验 ---------- */
+function setFieldError(fieldId, message) {
+  const field = $(fieldId);
+  if (!field) return;
+  field.classList.add('field--invalid');
+  const error = field.querySelector('.field__error');
+  if (error) error.textContent = message;
+}
+
+function clearFieldError(fieldId) {
+  const field = $(fieldId);
+  if (field) field.classList.remove('field--invalid');
+}
+
+function clearErrors() {
+  document.querySelectorAll('#view-form .field--invalid').forEach((field) => {
+    field.classList.remove('field--invalid');
+  });
+}
+
+/* 解析 yyyy/mm/dd、yyyy-mm-dd、yyyy.mm.dd，返回规范化文本与 ISO 字符串 */
+function normalizeDateText(value) {
+  const match = /^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/.exec(String(value).trim());
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return null;
+  }
+
+  const mm = String(month).padStart(2, '0');
+  const dd = String(day).padStart(2, '0');
+  return { text: `${year}/${mm}/${dd}`, iso: `${year}-${mm}-${dd}` };
+}
+
+// 出发日期：文本输入只保留数字与分隔符
+$('start-date').addEventListener('input', (event) => {
+  event.target.value = event.target.value.replace(/[^\d\/\-.]/g, '');
+});
+
+// 失焦时规范化为 yyyy/mm/dd
+$('start-date').addEventListener('blur', () => {
+  const input = $('start-date');
+  const value = input.value.trim();
+  if (!value) {
+    clearFieldError('field-start-date');
+    return;
+  }
+
+  const parsed = normalizeDateText(value);
+  if (!parsed) {
+    setFieldError('field-start-date', '请输入正确的日期格式（yyyy/mm/dd）');
+    return;
+  }
+
+  input.value = parsed.text;
+  $('start-date-picker').value = parsed.iso;
+  clearFieldError('field-start-date');
+});
+
+// 日历选择器回填
+$('start-date-picker').addEventListener('change', (event) => {
+  const iso = event.target.value;
+  if (!iso) return;
+  $('start-date').value = iso.replace(/-/g, '/');
+  clearFieldError('field-start-date');
+});
+
+function validateForm() {
+  clearErrors();
+  let valid = true;
+
+  const departure = $('departure').value.trim();
+  if (!departure) {
+    setFieldError('field-departure', '请输入出发地');
+    valid = false;
+  }
+
+  const destination = $('destination').value.trim();
+  if (!destination) {
+    setFieldError('field-destination', '请输入目的地');
+    valid = false;
+  }
+
+  const days = Number($('days').value);
+  if (!Number.isInteger(days) || days < 1 || days > 15) {
+    setFieldError('field-days', '出行天数需为 1-15 天');
+    valid = false;
+  }
+
+  const budget = Number($('budget').value);
+  if (!Number.isInteger(budget) || budget < 1 || budget > 999999) {
+    setFieldError('field-budget', '请输入人均预算（正整数）');
+    valid = false;
+  }
+
+  const people = Number($('people').value);
+  if (!Number.isInteger(people) || people < 1 || people > 20) {
+    setFieldError('field-people', '人数需为 1-20 人');
+    valid = false;
+  }
+
+  const startDateText = $('start-date').value.trim();
+  if (startDateText) {
+    const parsedDate = normalizeDateText(startDateText);
+    if (!parsedDate) {
+      setFieldError('field-start-date', '请输入正确的日期格式（yyyy/mm/dd）');
+      valid = false;
+    } else {
+      $('start-date').value = parsedDate.text;
+    }
+  }
+
+  if (!valid) toast('请检查必填项');
+  return valid;
+}
+
+/* ---------- 表单数据收集 ---------- */
+function getSingleValue(containerId) {
+  const active = document.querySelector(`#${containerId} .chip--active`);
+  return active ? active.dataset.value : null;
+}
+
+function getMultiValues(containerId) {
+  return Array.from(document.querySelectorAll(`#${containerId} .chip--active`))
+    .map((chip) => chip.dataset.value);
+}
+
+function collectGuides() {
+  return Array.from(document.querySelectorAll('#guide-list .guide-item'))
+    .map((item) => ({
+      type: item.querySelector('.guide-item__type').value,
+      content: item.querySelector('.guide-item__value').value.trim(),
+    }))
+    .filter((guide) => guide.content);
+}
+
+function collectForm() {
+  const parsedDate = normalizeDateText($('start-date').value.trim());
+
+  return {
+    departure: $('departure').value.trim(),
+    destination: $('destination').value.trim(),
+    days: Number($('days').value),
+    start_date: parsedDate ? parsedDate.iso : null,
+    budget_per_person: Number($('budget').value),
+    people: Number($('people').value),
+    interest_tags: getMultiValues('interest-chips'),
+    pace: getSingleValue('pace-chips'),
+    transport_pref: getSingleValue('transport-chips'),
+    hotel_pref: getSingleValue('hotel-chips'),
+    special_needs: $('special-needs').value.trim() || null,
+    guides: collectGuides(),
+  };
+}
+
+/* ---------- 生成中状态（防重复提交 + 离开拦截） ---------- */
+function setGenerating(on) {
+  state.generating = on;
+  $('loading-mask').hidden = !on;
+  $('btn-generate').disabled = on;
+  $('btn-regenerate').disabled = on;
+  document.body.style.overflow = on ? 'hidden' : '';
+
+  // 刷新 / 关闭标签页拦截（生成 PRD §3.2）
+  window.onbeforeunload = on
+    ? (event) => { event.preventDefault(); event.returnValue = ''; }
+    : null;
+}
+
+// 站内跳转拦截（顶部栏点击等）
+window.beforeLeavePage = () => {
+  if (!state.generating) return true;
+  return confirm('生成中，离开将丢失本次结果');
+};
+
+/* ---------- 生成 ---------- */
+async function handleGenerate(event) {
+  if (event) event.preventDefault();
+  if (state.generating) return;
+  if (!validateForm()) return;
+
+  state.formData = collectForm();
+  setGenerating(true);
+
+  const result = await apiRequest('/api/plans/generate', {
+    method: 'POST',
+    body: state.formData,
+    timeout: 130000, // 前端 130s > 后端 120s，让后端先超时返回可读文案
+  });
+
+  setGenerating(false);
+
+  if (result.code === 0 && result.data) {
+    state.plan = result.data;
+    state.savedPlanId = null;
+    state.activeDay = 0;
+    showResult();
+    return;
+  }
+
+  toast(result.message || '生成失败，请重试');
+}
+
+function showResult() {
+  $('view-form').hidden = true;
+  $('view-result').hidden = false;
+  window.scrollTo({ top: 0 });
+  renderResult();
+}
+
+/* ---------- 结果渲染（实现见 js/plan-render.js，与详情页共用） ---------- */
+function renderResult() {
+  const plan = state.plan || {};
+  const content = plan.plan_content || {};
+  const form = state.formData || {};
+
+  $('result-title').textContent = plan.title
+    || `${form.destination || ''} ${form.days || ''} 日游`;
+  $('btn-export').hidden = !state.savedPlanId;
+
+  $('result-body').innerHTML = PlanRender.render(
+    content,
+    { ...form, used_guide: plan.used_guide },
+    state.activeDay
+  );
+}
+
+/* 日切换（事件委托，结果区重渲染后依然有效） */
+$('result-body').addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-day]');
+  if (!tab) return;
+  state.activeDay = Number(tab.dataset.day);
+  renderResult();
+});
+
+/* ---------- 保存 ---------- */
+function buildSaveBody() {
+  const form = state.formData;
+  const guideSources = (form.guides || []).map((guide) => (
+    guide.type === 'link'
+      ? { type: 'link', url: guide.content, label: '分享链接' }
+      : { type: 'text', url: null, label: '用户粘贴的攻略正文' }
+  ));
+
+  return {
+    departure: form.departure,
+    destination: form.destination,
+    days: form.days,
+    start_date: form.start_date,
+    budget_per_person: form.budget_per_person,
+    people: form.people,
+    interest_tags: form.interest_tags,
+    pace: form.pace,
+    transport_pref: form.transport_pref,
+    hotel_pref: form.hotel_pref,
+    special_needs: form.special_needs,
+    used_guide: !!state.plan.used_guide,
+    guide_sources: guideSources,
+    plan_content: state.plan.plan_content,
+  };
+}
+
+async function handleSave() {
+  if (!state.plan || state.saving) return;
+
+  state.saving = true;
+  const button = $('btn-save');
+  button.disabled = true;
+
+  const result = await apiRequest('/api/plans', {
+    method: 'POST',
+    body: buildSaveBody(),
+  });
+
+  state.saving = false;
+  button.disabled = false;
+
+  if (result.code === 0 && result.data) {
+    state.savedPlanId = result.data.id;
+    $('btn-export').hidden = false;
+    toast('已保存');
+  } else {
+    toast(result.message || '保存失败，请重试');
+  }
+}
+
+/* ---------- 导出 PDF ---------- */
+async function handleExport() {
+  if (!state.savedPlanId) return;
+
+  const button = $('btn-export');
+  button.disabled = true;
+
+  const result = await apiDownload(`/api/plans/${state.savedPlanId}/pdf`);
+
+  button.disabled = false;
+
+  if (result.ok) {
+    saveBlob(result.blob, result.filename);
+    toast('导出成功');
+  } else {
+    toast(result.message);
+  }
+}
+
+/* ---------- 重新生成 / 返回 ---------- */
+async function handleRegenerate() {
+  if (state.generating) return;
+  state.savedPlanId = null;      // 新结果未保存，隐藏导出（PRD §3.6）
+  $('btn-export').hidden = true;
+  await handleGenerate();
+}
+
+function handleBack() {
+  $('view-result').hidden = true;
+  $('view-form').hidden = false;
+  window.scrollTo({ top: 0 });
+  // 表单条件保留在 DOM 中，无需回填（PRD §3.7）
+}
+
+/* ---------- 补充攻略优化（生成 PRD §3.6） ---------- */
+function appendGuidesToForm(guides) {
+  const list = $('guide-list');
+  guides.forEach((guide) => {
+    const item = document.createElement('div');
+    item.className = 'guide-item';
+    item.innerHTML = `
+      <select class="guide-item__type">
+        <option value="link">链接</option>
+        <option value="text">文本</option>
+      </select>
+      <input class="guide-item__value" placeholder="粘贴链接或攻略正文（文本 ≤500 字）" />
+      <button type="button" class="guide-item__remove" aria-label="删除这条参考攻略">
+        <svg class="icon icon--sm"><use href="#ic-close"/></svg>
+      </button>`;
+    item.querySelector('.guide-item__type').value = guide.type;
+    item.querySelector('.guide-item__value').value = guide.content;
+    list.appendChild(item);
+  });
+}
+
+async function handleSupplementGuide() {
+  const filledCount = Array.from(document.querySelectorAll('#guide-list .guide-item'))
+    .filter((item) => item.querySelector('.guide-item__value').value.trim()).length;
+
+  const guides = await openGuideDialog({
+    title: '补充参考攻略',
+    description: '补充后基于当前条件重新生成一版方案。链接仅作来源记录，粘贴的正文参与生成。',
+  });
+  if (!guides) return;
+
+  if (filledCount + guides.length > 3) {
+    toast('参考攻略最多 3 条，每条文本不超过 500 字');
+    return;
+  }
+
+  appendGuidesToForm(guides);
+
+  // 新结果未保存，隐藏导出按钮（PRD §3.6）
+  state.savedPlanId = null;
+  $('btn-export').hidden = true;
+
+  await handleGenerate();
+}
+
+/* ---------- 事件绑定 ---------- */
+$('plan-form').addEventListener('submit', handleGenerate);
+$('btn-save').addEventListener('click', handleSave);
+$('btn-export').addEventListener('click', handleExport);
+$('btn-regenerate').addEventListener('click', handleRegenerate);
+$('btn-supplement').addEventListener('click', handleSupplementGuide);
+$('btn-back').addEventListener('click', handleBack);
+</script>
+</body>
+</html>

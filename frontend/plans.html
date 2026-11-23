@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>我的旅行计划 · 旅梦规划助手</title>
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/plan-content.css" />
+<link rel="stylesheet" href="css/plans.css" />
+<script src="js/auth.js"></script>
+<script>
+  // 全局路由守卫：未登录访问自动跳转登录页（列表 PRD §1）
+  requireAuth();
+</script>
+</head>
+<body>
+
+<!-- 本页图标（顶部栏图标由 layout.js 注入） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-pin" viewBox="0 0 24 24"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/><path d="M8 13.5h3M8 17h6"/></symbol>
+  <symbol id="ic-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3"/><path d="M3.5 19c.5-3.2 2.8-5 5.5-5s5 1.8 5.5 5"/><path d="M16 6.2a3 3 0 0 1 0 5.6M17 14.4c2 .6 3.3 2.2 3.7 4.6"/></symbol>
+  <symbol id="ic-yuan" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.6"/><path d="M9 8.5l3 3.5 3-3.5M12 12v4.5M9.4 13.6h5.2M9.4 15.4h5.2"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="ic-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+  <symbol id="ic-chev-left" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="ic-chev-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="ic-map" viewBox="0 0 24 24"><path d="M3 6.5l6-2.5 6 2.5 6-2.5v13l-6 2.5-6-2.5-6 2.5v-13z"/><path d="M9 4v13M15 6.5v13"/></symbol>
+  <symbol id="ic-alert" viewBox="0 0 24 24"><path d="M12 3.5L2.5 20h19L12 3.5z"/><path d="M12 10v4M12 17h.01"/></symbol>
+</defs></svg>
+
+<main class="page">
+  <div class="page-head">
+    <div>
+      <div class="eyebrow" style="margin-bottom:8px">MY PLANS</div>
+      <h1>我的旅行计划</h1>
+      <p>已保存的行程，按保存时间倒序排列</p>
+    </div>
+    <div class="head-actions">
+      <a class="btn btn--primary" href="generate.html">
+        <svg class="icon icon--sm"><use href="#ic-plus"/></svg>生成旅行计划
+      </a>
+    </div>
+  </div>
+
+  <div class="card" style="padding:22px 24px">
+    <div class="toolbar">
+      <div class="search">
+        <svg class="icon"><use href="#ic-search"/></svg>
+        <input id="search-input" type="search" placeholder="搜索计划标题或目的地" autocomplete="off" />
+      </div>
+      <span class="count-label" id="count-label"></span>
+    </div>
+
+    <div id="plan-list"></div>
+    <nav id="pager" aria-label="分页"></nav>
+  </div>
+</main>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/plan-render.js"></script>
+<script>
+/* ==========================================================================
+   我的旅行计划 · 列表页
+   依据：需求文档/我的旅行计划-PRD.md v1.3、开发文档/接口文档.md v1.0
+   ========================================================================== */
+
+const $ = (id) => document.getElementById(id);
+const state = { page: 1, keyword: '', data: null, loading: false };
+let searchTimer = null;
+
+mountTopbar();
+setTopbarUser(getUsername());
+
+/* ---------- 数据加载 ---------- */
+async function loadPlans() {
+  if (state.loading) return;
+  state.loading = true;
+  renderSkeleton();
+
+  const params = new URLSearchParams({ page: String(state.page) });
+  if (state.keyword) params.set('keyword', state.keyword);
+
+  const result = await apiRequest(`/api/plans?${params.toString()}`);
+  state.loading = false;
+
+  if (result.code !== 0) {
+    renderError(result.message);
+    return;
+  }
+
+  state.data = result.data;
+
+  // 当页删空自动回退上一页（列表 PRD §3.7）
+  if (!state.data.list.length && state.page > 1) {
+    state.page -= 1;
+    return loadPlans();
+  }
+
+  renderList();
+}
+
+/* ---------- 渲染：骨架 / 列表 / 空态 / 失败 ---------- */
+function renderSkeleton() {
+  $('plan-list').innerHTML = `<div class="skeleton-list">${'<div class="skeleton-row"></div>'.repeat(3)}</div>`;
+  $('pager').innerHTML = '';
+  $('count-label').textContent = '';
+}
+
+function renderList() {
+  const { list, total, page, page_size: pageSize } = state.data;
+  $('count-label').textContent = `共 ${total} 条计划`;
+
+  if (!list.length) {
+    renderEmpty();
+    $('pager').innerHTML = '';
+    return;
+  }
+
+  $('plan-list').innerHTML = list.map(renderRow).join('');
+  renderPager(total, page, pageSize);
+}
+
+function renderRow(item) {
+  const tags = (item.interest_tags || [])
+    .map((tag) => `<span class="meta-tag meta-tag--interest">${PlanRender.esc(tag)}</span>`)
+    .join('');
+
+  return `<div class="plan-row" data-id="${item.id}" tabindex="0">
+    <div class="plan-row__main">
+      <h4 class="plan-row__title">${PlanRender.esc(item.title)}</h4>
+      <p class="plan-row__summary">${PlanRender.esc(item.summary)}</p>
+      <div class="plan-row__meta">
+        <span class="meta-tag"><svg class="icon"><use href="#ic-pin"/></svg>${PlanRender.esc(item.destination)}</span>
+        <span class="meta-tag"><svg class="icon"><use href="#ic-calendar"/></svg>${formatDateRange(item.start_date, item.days)}</span>
+        <span class="meta-tag"><svg class="icon"><use href="#ic-yuan"/></svg>人均 ${PlanRender.money(item.budget_per_person)}</span>
+        <span class="meta-tag"><svg class="icon"><use href="#ic-users"/></svg>${PlanRender.esc(item.people)} 人</span>
+        ${tags}
+        <span class="meta-tag"><svg class="icon"><use href="#ic-clock"/></svg>${formatDateTime(item.created_at)}</span>
+      </div>
+    </div>
+    <div class="plan-row__actions">
+      <button type="button" class="icon-btn" data-copy="${item.id}" title="复制" aria-label="复制该计划">
+        <svg class="icon"><use href="#ic-copy"/></svg>
+      </button>
+      <button type="button" class="icon-btn icon-btn--danger" data-delete="${item.id}" title="删除" aria-label="删除该计划">
+        <svg class="icon"><use href="#ic-trash"/></svg>
+      </button>
+      <svg class="icon" style="color:var(--text-3)"><use href="#ic-chev-right"/></svg>
+    </div>
+  </div>`;
+}
+
+function renderEmpty() {
+  const isSearch = !!state.keyword;
+  $('plan-list').innerHTML = `<div class="empty">
+    <div class="empty__icon">
+      <svg class="icon"><use href="${isSearch ? '#ic-search' : '#ic-map'}"/></svg>
+    </div>
+    <h3>${isSearch ? '未找到匹配的计划' : '暂无旅行计划'}</h3>
+    <p>${isSearch ? '换个关键词试试，或清空搜索查看全部' : '去生成你的第一个行程吧'}</p>
+    ${isSearch ? '' : `<a class="btn btn--primary" href="generate.html">
+      <svg class="icon icon--sm"><use href="#ic-plus"/></svg>生成旅行计划
+    </a>`}
+  </div>`;
+}
+
+function renderError(message) {
+  $('plan-list').innerHTML = `<div class="empty">
+    <div class="empty__icon"><svg class="icon"><use href="#ic-alert"/></svg></div>
+    <h3>加载失败</h3>
+    <p>${PlanRender.esc(message || '加载失败，请重试')}</p>
+    <button type="button" class="btn btn--primary" id="btn-retry">重试</button>
+  </div>`;
+  $('pager').innerHTML = '';
+  $('count-label').textContent = '';
+  $('btn-retry').addEventListener('click', loadPlans);
+}
+
+function renderPager(total, page, pageSize) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  if (pages <= 1) {
+    $('pager').innerHTML = '';
+    return;
+  }
+
+  let html = `<button type="button" class="pg" data-page="${page - 1}"
+      ${page === 1 ? 'disabled' : ''} aria-label="上一页">
+      <svg class="icon icon--sm"><use href="#ic-chev-left"/></svg></button>`;
+
+  for (let i = 1; i <= pages; i += 1) {
+    html += `<button type="button" class="pg ${i === page ? 'pg--active' : ''}" data-page="${i}">${i}</button>`;
+  }
+
+  html += `<button type="button" class="pg" data-page="${page + 1}"
+      ${page === pages ? 'disabled' : ''} aria-label="下一页">
+      <svg class="icon icon--sm"><use href="#ic-chev-right"/></svg></button>`;
+
+  $('pager').innerHTML = `<div class="pager">${html}</div>`;
+}
+
+/* ---------- 操作 ---------- */
+async function handleCopy(id) {
+  const result = await apiRequest(`/api/plans/${id}`);
+  if (result.code !== 0) {
+    toast(result.message || '加载失败，请重试');
+    return;
+  }
+
+  const record = result.data;
+  const text = PlanRender.buildCopyText(record.plan_content, record);
+  const ok = await copyText(text);
+  toast(ok ? '已复制' : '复制失败，请重试');
+}
+
+async function handleDelete(id) {
+  const confirmed = await showConfirm({
+    title: '确定删除该计划吗？',
+    message: '删除后不可恢复，该行程将从你的计划列表中永久移除。',
+    okText: '确定删除',
+    danger: true,
+  });
+  if (!confirmed) return;
+
+  const result = await apiRequest(`/api/plans/${id}`, { method: 'DELETE' });
+  if (result.code === 0) {
+    toast('已删除');
+    await loadPlans();
+  } else {
+    toast(result.message || '删除失败，请重试');
+  }
+}
+
+/* ---------- 事件绑定 ---------- */
+$('plan-list').addEventListener('click', (event) => {
+  const copyButton = event.target.closest('[data-copy]');
+  if (copyButton) {
+    event.stopPropagation();
+    handleCopy(Number(copyButton.dataset.copy));
+    return;
+  }
+
+  const deleteButton = event.target.closest('[data-delete]');
+  if (deleteButton) {
+    event.stopPropagation();
+    handleDelete(Number(deleteButton.dataset.delete));
+    return;
+  }
+
+  const row = event.target.closest('.plan-row');
+  if (row) {
+    location.href = `plan-detail.html?id=${row.dataset.id}`;
+  }
+});
+
+$('plan-list').addEventListener('keydown', (event) => {
+  if (event.key !== 'Enter') return;
+  const row = event.target.closest('.plan-row');
+  if (row) location.href = `plan-detail.html?id=${row.dataset.id}`;
+});
+
+$('pager').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-page]');
+  if (!button || button.disabled) return;
+
+  const target = Number(button.dataset.page);
+  if (!target || target === state.page) return;
+
+  state.page = target;
+  loadPlans();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// 搜索防抖（列表 PRD §3.2：前端触发、后端过滤）
+$('search-input').addEventListener('input', (event) => {
+  clearTimeout(searchTimer);
+  const value = event.target.value.trim();
+
+  searchTimer = setTimeout(() => {
+    state.keyword = value;
+    state.page = 1;
+    loadPlans();
+  }, 300);
+});
+
+/* ---------- 初始化 ---------- */
+loadPlans();
+</script>
+</body>
+</html>

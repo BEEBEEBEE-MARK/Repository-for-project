@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>登录 / 注册 · 旅梦规划助手</title>
+<link rel="stylesheet" href="css/base.css" />
+<script src="js/auth.js"></script>
+<script>
+  // 已登录状态访问登录页 → 自动跳转主页（登录 PRD §3.1、注册 PRD §3.1）
+  redirectIfAuthed();
+</script>
+</head>
+<body>
+
+<!-- ============ SVG 图标库 ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-logo" viewBox="0 0 24 24"><circle cx="17.2" cy="6.8" r="2.3"/><path d="M2.5 19.5l6-8 3.6 4.4 2.6-3.2 7.3 6.8"/><path d="M2 19.5h20"/></symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c.6-3.6 3.6-5.5 7.5-5.5s6.9 1.9 7.5 5.5"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><path d="M12 14.5v2.5"/></symbol>
+  <symbol id="ic-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3.7 6.5L12 13l8.3-6.5"/></symbol>
+  <symbol id="ic-tag" viewBox="0 0 24 24"><path d="M3.5 11.5V4a.5.5 0 0 1 .5-.5h7.5L20.5 12.5 12.5 20.5 3.5 11.5z"/><circle cx="8" cy="8" r="1.3"/></symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"/><circle cx="12" cy="12" r="2.6"/></symbol>
+  <symbol id="ic-eye-off" viewBox="0 0 24 24"><path d="M4 4l16 16"/><path d="M9.6 5.4A10.7 10.7 0 0 1 12 5c6 0 9.5 6 9.5 6a15.3 15.3 0 0 1-2.7 3.2M6.3 6.7A15.6 15.6 0 0 0 2.5 12s3.5 6 9.5 6c1.1 0 2.1-.2 3-.5"/><path d="M10 10a2.6 2.6 0 0 0 3.7 3.7"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></symbol>
+</defs></svg>
+
+<!-- ============ 登录 / 注册 ============ -->
+<div class="auth">
+
+  <!-- 左侧品牌区 -->
+  <aside class="auth__brand">
+    <div class="auth__brand-top">
+      <span class="brand-mark"><svg class="icon"><use href="#ic-logo"/></svg></span>
+      <span class="auth__brand-name">旅梦规划助手</span>
+    </div>
+    <h2 class="auth__headline">把想去的地方，<br/>变成一份可以出发的计划。</h2>
+    <p class="auth__lead">填好出行条件，AI 为你整理行程、预算与注意事项。保存、查看、导出，随时回来继续打磨。</p>
+
+    <svg class="auth__art" viewBox="0 0 620 300" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <circle cx="470" cy="92" r="46" fill="#219C8E" opacity=".10"/>
+      <circle cx="470" cy="92" r="30" fill="#219C8E" opacity=".13"/>
+      <path d="M0 218 Q90 150 165 196 T320 186 Q400 140 470 190 T620 168 L620 300 L0 300 Z" fill="#219C8E" opacity=".09"/>
+      <path d="M0 244 Q110 190 205 228 T390 220 Q500 186 620 226 L620 300 L0 300 Z" fill="#219C8E" opacity=".13"/>
+      <path d="M0 270 Q130 232 250 262 T470 250 Q550 236 620 258 L620 300 L0 300 Z" fill="#219C8E" opacity=".18"/>
+      <path d="M120 300 Q190 250 250 268 T400 258" fill="none" stroke="#219C8E" stroke-width="2.5" stroke-dasharray="7 9" opacity=".38"/>
+      <path d="M300 92 l10 -7 10 7 M330 108 l8 -6 8 6 M278 112 l7 -5 7 5" fill="none" stroke="#219C8E" stroke-width="2" opacity=".35" stroke-linecap="round"/>
+      <circle cx="250" cy="268" r="5" fill="#fff" stroke="#219C8E" stroke-width="2.5" opacity=".75"/>
+      <path d="M0 292 H620" stroke="#219C8E" stroke-width="1" opacity=".18"/>
+    </svg>
+    <div class="auth__foot">TRAVEL PLANNER · 让每段旅程都有章可循</div>
+  </aside>
+
+  <!-- 右侧表单区 -->
+  <main class="auth__panel">
+    <div class="auth__card">
+      <div class="auth__eyebrow">WELCOME</div>
+      <h1 class="auth__title" id="auth-title">欢迎回来</h1>
+      <p class="auth__sub" id="auth-sub">登录后继续规划你的下一段旅程</p>
+
+      <div class="auth__tabs" role="tablist">
+        <button type="button" class="auth__tab auth__tab--active" id="tab-login"
+                role="tab" aria-selected="true" data-tab="login">登录</button>
+        <button type="button" class="auth__tab" id="tab-register"
+                role="tab" aria-selected="false" data-tab="register">注册</button>
+      </div>
+
+      <!-- ---------- 登录表单 ---------- -->
+      <form class="auth__form" id="form-login" novalidate>
+        <div class="auth__banner" id="login-banner" role="alert"></div>
+
+        <div class="field" id="field-login-account">
+          <label class="field__label" for="login-account">用户名 / 邮箱</label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-user"/></svg>
+            <input class="input input--icon" id="login-account" name="account"
+                   placeholder="用户名 / 邮箱" autocomplete="username" />
+          </div>
+          <p class="field__error">请输入用户名</p>
+        </div>
+
+        <div class="field" id="field-login-password">
+          <label class="field__label" for="login-password">密码</label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-lock"/></svg>
+            <input class="input input--icon" id="login-password" name="password"
+                   type="password" placeholder="请输入密码" autocomplete="current-password" />
+            <button type="button" class="eye-btn" data-toggle-password="login-password" aria-label="显示密码">
+              <svg class="icon icon--sm"><use href="#ic-eye"/></svg>
+            </button>
+          </div>
+          <p class="field__error">请输入密码</p>
+        </div>
+
+        <div class="auth__checkbox-row">
+          <label class="check">
+            <input type="checkbox" id="login-remember" />
+            记住我（7 天）
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn--primary btn--lg" id="btn-login">登录</button>
+
+        <div class="auth__bottom">
+          还没有账号？<button type="button" class="link" id="to-register">立即注册</button>
+        </div>
+      </form>
+
+      <!-- ---------- 注册表单 ---------- -->
+      <form class="auth__form" id="form-register" novalidate hidden>
+        <div class="auth__banner" id="register-banner" role="alert"></div>
+
+        <div class="field" id="field-register-username">
+          <label class="field__label" for="register-username">用户名</label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-user"/></svg>
+            <input class="input input--icon" id="register-username" name="username"
+                   placeholder="3-20 位字母、数字或下划线" autocomplete="username" />
+          </div>
+          <p class="field__error"></p>
+        </div>
+
+        <div class="field" id="field-register-email">
+          <label class="field__label" for="register-email">邮箱</label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-mail"/></svg>
+            <input class="input input--icon" id="register-email" name="email"
+                   type="email" placeholder="请输入邮箱" autocomplete="email" />
+          </div>
+          <p class="field__error"></p>
+        </div>
+
+        <div class="field" id="field-register-password">
+          <label class="field__label" for="register-password">密码</label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-lock"/></svg>
+            <input class="input input--icon" id="register-password" name="password"
+                   type="password" placeholder="6-20 位，需包含字母和数字" autocomplete="new-password" />
+            <button type="button" class="eye-btn" data-toggle-password="register-password" aria-label="显示密码">
+              <svg class="icon icon--sm"><use href="#ic-eye"/></svg>
+            </button>
+          </div>
+          <p class="field__error"></p>
+        </div>
+
+        <div class="field" id="field-register-confirm">
+          <label class="field__label" for="register-confirm">确认密码</label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-lock"/></svg>
+            <input class="input input--icon" id="register-confirm" name="confirm_password"
+                   type="password" placeholder="请再次输入密码" autocomplete="new-password" />
+            <button type="button" class="eye-btn" data-toggle-password="register-confirm" aria-label="显示密码">
+              <svg class="icon icon--sm"><use href="#ic-eye"/></svg>
+            </button>
+          </div>
+          <p class="field__error"></p>
+        </div>
+
+        <div class="field" id="field-register-invite">
+          <label class="field__label" for="register-invite">邀请码<span class="field__required">*</span></label>
+          <div class="input-wrap">
+            <svg class="icon"><use href="#ic-tag"/></svg>
+            <input class="input input--icon" id="register-invite" name="invite_code"
+                   placeholder="请输入站长提供的邀请码" autocomplete="off" />
+          </div>
+          <p class="field__error"></p>
+        </div>
+
+        <p class="auth__rules">用户名、邮箱全局唯一；注册需邀请码，由站长提供；注册后不自动登录，需手动登录。</p>
+
+        <button type="submit" class="btn btn--primary btn--lg" id="btn-register">注册</button>
+
+        <div class="auth__bottom">
+          已有账号？<button type="button" class="link" id="to-login">去登录</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script>
+/* ==========================================================================
+   登录 / 注册页逻辑
+   依据：
+   - 需求文档/用户登录-需求描述.md v1.1
+   - 需求文档/用户注册-需求描述.md v1.3
+   - 开发文档/接口文档.md v1.0
+   ========================================================================== */
+
+const $ = (id) => document.getElementById(id);
+
+/* ---------- 校验规则（与需求文档逐条对应） ---------- */
+const PATTERN = {
+  username: /^[A-Za-z0-9_]{3,20}$/,
+  email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  // 6-20 位，必须同时含字母和数字；允许字母、数字及常见特殊字符，不允许空格
+  password: /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9!@#$%^&*]{6,20}$/,
+  invite: /^[A-Za-z0-9]{6,20}$/,
+};
+const RESERVED_USERNAMES = ['admin', 'root', 'administrator'];
+
+function validUsername(value) {
+  if (!PATTERN.username.test(value)) return '用户名需为 3-20 位字母、数字或下划线';
+  if (RESERVED_USERNAMES.includes(value.toLowerCase())) return '该用户名为系统保留，请更换';
+  return '';
+}
+
+function validEmail(value) {
+  return PATTERN.email.test(value) ? '' : '请输入正确的邮箱格式';
+}
+
+function validPassword(value) {
+  return PATTERN.password.test(value) ? '' : '密码需为 6-20 位，且必须包含字母和数字';
+}
+
+/**
+ * 邀请码校验（注册 PRD §2.5）
+ * - 为空提示「请输入邀请码」
+ * - 格式不符统一提示「邀请码错误」，不区分具体原因
+ * - 有效性（是否存在/停用/过期/用满）由后端校验
+ */
+function validInvite(value) {
+  if (!value) return '请输入邀请码';
+  if (!PATTERN.invite.test(value)) return '邀请码错误';
+  return '';
+}
+
+/* ---------- 错误展示 ---------- */
+function setFieldError(fieldId, message) {
+  const field = $(fieldId);
+  if (!field) return;
+  field.classList.add('field--invalid');
+  const error = field.querySelector('.field__error');
+  if (error && message) error.textContent = message;
+}
+
+function clearFieldError(fieldId) {
+  const field = $(fieldId);
+  if (field) field.classList.remove('field--invalid');
+}
+
+function showBanner(formId, message) {
+  const banner = $(formId).querySelector('.auth__banner');
+  banner.textContent = message;
+  banner.classList.add('auth__banner--show');
+}
+
+function clearAllErrors(formId) {
+  const form = $(formId);
+  form.querySelectorAll('.field--invalid').forEach((field) => field.classList.remove('field--invalid'));
+  const banner = form.querySelector('.auth__banner');
+  banner.textContent = '';
+  banner.classList.remove('auth__banner--show');
+}
+
+/* ---------- 按钮 loading（防重复提交） ---------- */
+function setButtonLoading(button, loading, text) {
+  if (loading) {
+    button.dataset.originalText = text;
+    button.disabled = true;
+    button.innerHTML = '<span class="spin"></span>' + text;
+  } else {
+    button.disabled = false;
+    button.textContent = text;
+  }
+}
+
+/* ---------- Tab 切换 ---------- */
+function setTab(tab) {
+  const isLogin = tab === 'login';
+
+  $('tab-login').classList.toggle('auth__tab--active', isLogin);
+  $('tab-register').classList.toggle('auth__tab--active', !isLogin);
+  $('tab-login').setAttribute('aria-selected', String(isLogin));
+  $('tab-register').setAttribute('aria-selected', String(!isLogin));
+
+  $('form-login').hidden = !isLogin;
+  $('form-register').hidden = isLogin;
+
+  $('auth-title').textContent = isLogin ? '欢迎回来' : '创建账号';
+  $('auth-sub').textContent = isLogin
+    ? '登录后继续规划你的下一段旅程'
+    : '填好信息，开启你的第一段旅程';
+
+  clearAllErrors('form-login');
+  clearAllErrors('form-register');
+}
+
+/* ---------- 登录提交 ---------- */
+async function handleLogin(event) {
+  event.preventDefault();
+  clearAllErrors('form-login');
+
+  const account = $('login-account').value.trim();
+  const password = $('login-password').value;
+
+  let invalid = false;
+  if (!account) { setFieldError('field-login-account', '请输入用户名'); invalid = true; }
+  if (!password) { setFieldError('field-login-password', '请输入密码'); invalid = true; }
+  if (invalid) return;
+
+  const button = $('btn-login');
+  setButtonLoading(button, true, '登录中…');
+
+  const result = await apiRequest('/api/auth/login', {
+    method: 'POST',
+    body: {
+      account,
+      password,
+      remember_me: $('login-remember').checked,
+    },
+    withToken: false,
+    onUnauthorized: false,
+  });
+
+  setButtonLoading(button, false, '登录');
+
+  if (result.code === 0) {
+    setAuth(result.data.token, result.data.user.username);
+    location.replace('index.html');
+    return;
+  }
+
+  // 登录失败：统一提示，密码框清空并聚焦，账号保留（登录 PRD §6）
+  if (result.code === 401) {
+    showBanner('form-login', result.message || '用户名或密码错误');
+    $('login-password').value = '';
+    $('login-password').focus();
+    return;
+  }
+
+  showBanner('form-login', result.message || '网络异常，请稍后重试');
+}
+
+/* ---------- 注册提交 ---------- */
+async function handleRegister(event) {
+  event.preventDefault();
+  clearAllErrors('form-register');
+
+  const username = $('register-username').value.trim();
+  const email = $('register-email').value.trim();
+  const password = $('register-password').value;
+  const confirm = $('register-confirm').value;
+  const inviteCode = $('register-invite').value.trim();
+
+  let invalid = false;
+
+  const usernameError = validUsername(username);
+  if (usernameError) { setFieldError('field-register-username', usernameError); invalid = true; }
+
+  const emailError = validEmail(email);
+  if (emailError) { setFieldError('field-register-email', emailError); invalid = true; }
+
+  const passwordError = validPassword(password);
+  if (passwordError) { setFieldError('field-register-password', passwordError); invalid = true; }
+
+  if (confirm !== password) {
+    setFieldError('field-register-confirm', '密码不一致，请重新输入');
+    invalid = true;
+  }
+
+  // 邀请码仅提交时校验（注册 PRD §5），不做失焦校验
+  const inviteError = validInvite(inviteCode);
+  if (inviteError) { setFieldError('field-register-invite', inviteError); invalid = true; }
+
+  if (invalid) return;
+
+  const button = $('btn-register');
+  setButtonLoading(button, true, '注册中…');
+
+  const result = await apiRequest('/api/auth/register', {
+    method: 'POST',
+    body: { username, email, password, invite_code: inviteCode },
+    withToken: false,
+    onUnauthorized: false,
+  });
+
+  setButtonLoading(button, false, '注册');
+
+  if (result.code === 0) {
+    // 注册成功：切到登录页签并带入用户名（注册 PRD §3.4）
+    const registeredName = (result.data && result.data.username) || username;
+    resetRegisterForm();
+    setTab('login');
+    $('login-account').value = registeredName;
+    $('login-password').value = '';
+    $('login-password').focus();
+    toast('注册成功，请登录');
+    return;
+  }
+
+  // 后端错误按关键词映射到对应字段，映射不到则显示在顶部
+  const fieldMap = [
+    ['用户名', 'field-register-username'],
+    ['邮箱', 'field-register-email'],
+    ['密码', 'field-register-password'],
+    ['邀请码', 'field-register-invite'],
+  ];
+  const matched = fieldMap.find(([keyword]) => (result.message || '').includes(keyword));
+  if (matched) {
+    setFieldError(matched[1], result.message);
+  } else {
+    showBanner('form-register', result.message || '网络异常，请稍后重试');
+  }
+}
+
+/* ---------- 表单重置 ---------- */
+function resetRegisterForm() {
+  ['register-username', 'register-email', 'register-password', 'register-confirm', 'register-invite']
+    .forEach((id) => { $(id).value = ''; });
+
+  // 密码框若处于「显示明文」状态，恢复为密码类型并复位图标
+  document.querySelectorAll('#form-register input[type="text"]').forEach((input) => {
+    if (input.name === 'password' || input.name === 'confirm_password') {
+      input.type = 'password';
+      const eye = document.querySelector(`[data-toggle-password="${input.id}"] use`);
+      if (eye) eye.setAttribute('href', '#ic-eye');
+    }
+  });
+
+  clearAllErrors('form-register');
+}
+
+/* ---------- 失焦格式校验（注册） ----------
+   注意：唯一性（用户名/邮箱是否已被占用）当前无预检接口，
+   只能依赖提交时后端返回，见《接口文档》未提供查重接口。
+-------------------------------------------------- */
+function bindBlurValidation(inputId, fieldId, validator, trim = true) {
+  const input = $(inputId);
+  input.addEventListener('blur', () => {
+    const raw = input.value;
+    const value = trim ? raw.trim() : raw;
+    if (!value) { clearFieldError(fieldId); return; }
+    const error = validator(value);
+    if (error) setFieldError(fieldId, error);
+    else clearFieldError(fieldId);
+  });
+}
+
+bindBlurValidation('register-username', 'field-register-username', validUsername);
+bindBlurValidation('register-email', 'field-register-email', validEmail);
+bindBlurValidation('register-password', 'field-register-password', validPassword, false);
+
+/* ---------- 唯一性失焦预检（GET /api/auth/check） ----------
+   仅当格式校验通过时请求；用序号丢弃过期响应，避免快速切换输入时旧结果覆盖新状态。
+-------------------------------------------------- */
+const checkSeq = { username: 0, email: 0 };
+
+async function runAvailabilityCheck(field, inputId, fieldId, validator) {
+  const value = $(inputId).value.trim();
+  if (!value || validator(value)) return; // 空或格式错误由格式校验负责提示
+
+  const seq = ++checkSeq[field];
+  const result = await apiRequest(
+    `/api/auth/check?field=${field}&value=${encodeURIComponent(value)}`,
+    { withToken: false, onUnauthorized: false }
+  );
+  if (seq !== checkSeq[field]) return; // 已有更新的请求，丢弃本次结果
+
+  if (result.code === 0 && result.data) {
+    if (result.data.exists) {
+      setFieldError(fieldId, result.data.message);
+    } else {
+      clearFieldError(fieldId);
+    }
+  }
+}
+
+$('register-username').addEventListener('blur', () => {
+  runAvailabilityCheck('username', 'register-username', 'field-register-username', validUsername);
+});
+$('register-email').addEventListener('blur', () => {
+  runAvailabilityCheck('email', 'register-email', 'field-register-email', validEmail);
+});
+
+// 确认密码失焦：与密码比对
+$('register-confirm').addEventListener('blur', () => {
+  const confirm = $('register-confirm').value;
+  const password = $('register-password').value;
+  if (confirm && confirm !== password) {
+    setFieldError('field-register-confirm', '密码不一致，请重新输入');
+  } else {
+    clearFieldError('field-register-confirm');
+  }
+});
+
+// 密码修改后，若确认密码已填，重新比对提示
+$('register-password').addEventListener('input', () => {
+  if ($('register-confirm').value) {
+    clearFieldError('field-register-confirm');
+  }
+});
+
+/* ---------- 输入时清除该字段错误 ---------- */
+document.querySelectorAll('.field .input').forEach((input) => {
+  input.addEventListener('input', () => {
+    const field = input.closest('.field');
+    if (field) field.classList.remove('field--invalid');
+  });
+});
+
+/* ---------- 密码可见性切换 ---------- */
+document.querySelectorAll('[data-toggle-password]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const input = $(button.dataset.togglePassword);
+    const isHidden = input.type === 'password';
+    input.type = isHidden ? 'text' : 'password';
+    button.querySelector('use').setAttribute('href', isHidden ? '#ic-eye-off' : '#ic-eye');
+    button.setAttribute('aria-label', isHidden ? '隐藏密码' : '显示密码');
+  });
+});
+
+/* ---------- 事件绑定 ---------- */
+$('form-login').addEventListener('submit', handleLogin);
+$('form-register').addEventListener('submit', handleRegister);
+
+$('tab-login').addEventListener('click', () => setTab('login'));
+$('tab-register').addEventListener('click', () => setTab('register'));
+$('to-register').addEventListener('click', () => setTab('register'));
+$('to-login').addEventListener('click', () => setTab('login'));
+
+/* ---------- 初始化 ---------- */
+const initialTab = new URLSearchParams(location.search).get('tab');
+setTab(initialTab === 'register' ? 'register' : 'login');
+</script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# ===== 敏感配置（绝不提交）=====
+.env
+*.env
+!.env.example
+
+# ===== 数据库 =====
+backend/travel.db
+backend/travel.db-shm
+backend/travel.db-wal
+backend/*.db
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ===== 本地工具目录 =====
+workbuddy/
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

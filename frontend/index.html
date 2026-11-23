@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>旅梦规划助手</title>
+<link rel="stylesheet" href="css/base.css" />
+<link rel="stylesheet" href="css/home.css" />
+<script src="js/auth.js"></script>
+<script>
+  // 全局路由守卫：未登录访问自动跳转登录页（主页面 PRD §2）
+  requireAuth();
+</script>
+</head>
+<body>
+
+<!-- 本页图标（顶部栏图标由 layout.js 注入） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="ic-sparkles" viewBox="0 0 24 24"><path d="M12 3l1.7 4.6L18.3 9.3l-4.6 1.7L12 15.6l-1.7-4.6-4.6-1.7 4.6-1.7L12 3z"/><path d="M19 15.5l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9z"/></symbol>
+  <symbol id="ic-calendar" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.8h17M8 3v4M16 3v4"/><path d="M8 13.5h3M8 17h6"/></symbol>
+  <symbol id="ic-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+</defs></svg>
+
+<!-- ============ 主页面主体 ============ -->
+<main class="home">
+  <div class="home__glow"></div>
+
+  <div class="eyebrow home__eyebrow">TRAVEL PLANNER</div>
+  <h1 class="home__title">旅梦规划助手</h1>
+  <p class="home__lead">把想去的地方，变成一份可以出发的计划</p>
+
+  <div class="home__entries">
+    <a class="entry" href="generate.html">
+      <span class="entry__icon">
+        <svg class="icon"><use href="#ic-sparkles"/></svg>
+      </span>
+      <span class="entry__body">
+        <span class="entry__title">生成旅行计划</span>
+        <span class="entry__desc">填写出行条件，AI 为你整理一份完整行程</span>
+      </span>
+      <svg class="icon entry__arrow"><use href="#ic-arrow-right"/></svg>
+    </a>
+
+    <a class="entry" href="plans.html">
+      <span class="entry__icon">
+        <svg class="icon"><use href="#ic-calendar"/></svg>
+      </span>
+      <span class="entry__body">
+        <span class="entry__title">我的旅行计划</span>
+        <span class="entry__desc">查看、搜索、复制与导出已保存的行程</span>
+      </span>
+      <svg class="icon entry__arrow"><use href="#ic-arrow-right"/></svg>
+    </a>
+  </div>
+
+  <div class="home__tip">行程与价格均为 AI 估算，出行前请自行核实</div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/layout.js"></script>
+<script>
+/**
+ * 主页面逻辑
+ * 依据：需求文档/主页面-需求描述.md v1.0、开发文档/接口文档.md v1.0
+ */
+
+mountTopbar();
+
+// 先用本地缓存的用户名渲染，避免闪烁；再用 /me 校正（token 过期时 api.js 会自动跳转登录页）
+setTopbarUser(getUsername());
+
+async function initUser() {
+  const result = await apiRequest('/api/auth/me');
+  if (result.code === 0 && result.data) {
+    setUsername(result.data.username);
+    setTopbarUser(result.data.username);
+  }
+  // 其余错误（网络异常等）不打断页面使用，保留缓存中的用户名
+}
+
+initUser();
+</script>
+</body>
+</html>

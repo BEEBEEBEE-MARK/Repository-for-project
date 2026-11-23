@@ -132,11 +132,24 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
    const API_BASE = ['localhost','127.0.0.1'].includes(location.hostname) ? 'http://localhost:8000' : '';
    ```
    生产由 FastAPI `StaticFiles` 挂载 `frontend/` 提供同源访问，免 CORS 配置。
-3. **SQLite 生产参数**：连接时设置 `journal_mode=WAL`、`busy_timeout=5000`；部署时每日 `cp travel.db` 备份（脚本写入部署文档）。
-4. **反向代理超时**：若前置 nginx，必须设 `proxy_read_timeout 130s`（生成接口 120s 超时）；阿里云安全组放行对应端口。
+3. **SQLite 生产参数**：连接时设置 `journal_mode=WAL`、`busy_timeout=5000`；每日用 SQLite backup API 备份（WAL 模式下直接 `cp` 可能不一致），脚本见「线上部署」。
+4. **反向代理超时**：若前置 nginx，必须设 `proxy_read_timeout 130s`（生成接口 120s 超时）；云平台安全组放行对应端口。
 5. **资源保护**：服务器开 2G swap；PDF 导出加并发信号量（同时 ≤2 份），防止内存叠峰。
 6. **剪贴板降级**：http 非安全上下文下 `navigator.clipboard` 不可用，复制功能需回退 `textarea + execCommand('copy')`。
 7. **部署文档**（安装 uv / systemd 守护 / 备份 / nginx 示例）在开发文档阶段产出，文件名 `开发文档/部署文档.md`。
+
+## 线上部署（2026-11-23 已上线）
+
+- 地址：`http://43.163.107.121:9000`（腾讯云轻量 Ubuntu 22.04，2 核 / 1.9G）
+- 代码目录：`/home/ubuntu/travel-plan`，更新方式 `git pull && sudo systemctl restart travel-plan`
+- 服务：systemd `travel-plan.service`（开机自启、崩溃重启、`MemoryMax=512M`）
+- 端口：9000（云安全组已开放 9000-10000；9080 / 9999 已被占）
+- Python：uv 管理的 3.12.11，依赖走清华源；系统 Python 3.10 未改动
+- 配置：`backend/.env`（权限 600，`APP_ENV=production`）
+- 备份：`/home/ubuntu/backup/travel_db_backup.sh`，cron 每日 3:00，保留 7 天
+- SSH：本机 `ssh my-server` 免密（密钥 `~/.ssh/travel_deploy`）
+- 邀请码：已签发正式码；`DEV-DEFAULT` 已停用
+- 日志：`sudo journalctl -u travel-plan -f`
 
 ## 代码风格
 
@@ -162,8 +175,10 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
 
 - ✅ 需求阶段：6 份需求文档收口（生成 v1.5 / 列表 v1.3 / PDF v1.5 / 注册 v1.1 / 登录 v1.1 / 主页面 v1.0）+ 用户故事 12 条
 - ✅ 原型：6 视图设计稿已产出并按需求文档核验修订
-- ✅ 部署规划：目标环境阿里云轻量 2核2G + 公网 IP，约定见「部署约定」
+- ✅ 部署：已于 2026-11-23 上线腾讯云轻量（Ubuntu 22.04, 2核1.9G），详情见「线上部署」
 - ✅ 邀请码注册：方案=数据库表 + 命令行签发；注册 PRD v1.2、原型注册页、说明文档《开发文档/邀请码管理.md》均已同步
 - ✅ 后端：骨架 + 认证（注册/登录/me）+ 计划接口（生成/保存/列表/详情/删除）
-- ⬜ 待办：前端我的计划列表页、详情页；后端 PDF 导出；部署文档
+- ✅ 前端：登录 / 主页面 / 生成页 / 我的计划列表 / 详情页 5 页完成
+- ✅ PDF 导出：后端 `services/pdf_render.py` + `/api/plans/{id}/pdf` 已实现
+- ⬜ 待办：部署文档（`开发文档/部署文档.md`）
 - 📌 实测留痕：生成接口 5 天行程 17.9s、3 天 12.2s（远低于 60s 目标；120s 上限为 15 天长行程保留余量）

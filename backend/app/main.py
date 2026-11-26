@@ -3,6 +3,7 @@
 启动：uv run uvicorn app.main:app --reload --port 8000
 """
 
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -16,16 +17,31 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .api.auth import router as auth_router
 from .api.plans import router as plans_router
+from .core.config import settings
 from .core.database import Base, SessionLocal, engine
+from .core.limits import RateLimiterRegistry
+from .core.middleware import (
+    BodySizeLimitMiddleware,
+    RateLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
 from .core.security import utcnow
 from .models import InviteCode  # noqa: F401  （导入以注册模型）
+
+logger = logging.getLogger("app.main")
 
 FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend"
 DEFAULT_INVITE_CODE = "DEV-DEFAULT"
 
 
 def _ensure_default_invite() -> None:
-    """首次启动且邀请码表为空时，创建本地开发默认邀请码。"""
+    """首次启动且邀请码表为空时，创建本地开发默认邀请码。
+
+    生产环境禁止自动创建：否则邀请码表一旦被清空，会重新出现 999 次永不过期的万能码。
+    """
+    if not settings.is_dev:
+        return
+
     db = SessionLocal()
     try:
         if db.query(InviteCode).first():
@@ -65,7 +81,29 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="旅梦规划助手 API", lifespan=lifespan)
+app = FastAPI(
+    title="旅梦规划助手 API",
+    lifespan=lifespan,
+    # 生产默认关闭接口文档（/docs、/openapi.json 会暴露完整接口结构）
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
+    openapi_url="/openapi.json" if settings.enable_docs else None,
+)
+
+# 限流规则集中维护（测试可调用 RATE_LIMITER.reset() 清空计数）
+RATE_LIMITER = RateLimiterRegistry([
+    ("/api/auth/login", "POST", settings.rate_limit_login, 60),
+    ("/api/auth/register", "POST", settings.rate_limit_register, 60),
+    ("/api/auth/check", "GET", settings.rate_limit_check, 60),
+    ("/api/plans/generate", "POST", settings.rate_limit_generate, 60),
+    ("/api/plans", "POST", settings.rate_limit_save, 60),
+])
+
+# 安全中间件注册顺序：后添加的在外层。
+# 最终由外到内：SecurityHeaders → RateLimit → CORS → BodySize
+app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_body_bytes)
+if settings.rate_limit_enabled:
+    app.add_middleware(RateLimitMiddleware, registry=RATE_LIMITER)
 
 # 开发环境允许任何 localhost 来源（Live Server 端口可能是 5500/5501 等）
 app.add_middleware(
@@ -75,6 +113,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -104,6 +144,16 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=400,
         content={"code": 400, "message": "参数错误", "data": None},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """未处理异常统一兜底：对外只给通用文案，细节只写入服务器日志。"""
+    logger.exception("未处理异常：%s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"code": 500, "message": "服务器开小差了，请稍后重试", "data": None},
     )
 
 

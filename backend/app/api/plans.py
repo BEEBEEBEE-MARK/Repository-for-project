@@ -14,6 +14,7 @@ from fastapi.responses import JSONResponse, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
+from ..core.config import settings
 from ..core.database import get_db
 from ..core.security import utcnow
 from ..models import TravelRecord, User
@@ -37,6 +38,9 @@ PAGE_SIZE = 10
 
 # PDF 导出并发限流（部署约定 §5：同时 ≤2 份，防止内存叠峰）
 _PDF_SEMAPHORE = threading.Semaphore(2)
+
+# 生成接口全局并发上限：LLM 等待期占满线程池会拖垮内存与 API 配额
+_GENERATE_SEMAPHORE = threading.Semaphore(settings.generate_concurrency)
 
 
 def ok(data=None):
@@ -325,6 +329,16 @@ def generate(payload: GenerateRequest, current_user: User = Depends(get_current_
     if error:
         return fail(400, error)
 
+    # 达并发上限立即拒绝，不排队（避免请求堆积占满线程池）
+    if not _GENERATE_SEMAPHORE.acquire(blocking=False):
+        return fail(429, "当前使用人数较多，请稍后再试")
+    try:
+        return _generate_plan(payload)
+    finally:
+        _GENERATE_SEMAPHORE.release()
+
+
+def _generate_plan(payload: GenerateRequest):
     # 仅「粘贴文本」参与生成；清洗广告与联系方式，全部无效则静默降级
     valid_texts = []
     for guide in payload.guides:
@@ -392,6 +406,9 @@ def validate_save(payload: SavePlanRequest) -> str | None:
         return "人数需为 1-20 人"
     if not isinstance(payload.plan_content, dict) or not payload.plan_content:
         return "参数错误"
+    content_size = len(json.dumps(payload.plan_content, ensure_ascii=False).encode("utf-8"))
+    if content_size > settings.max_plan_content_bytes:
+        return "计划内容过大"
     return None
 
 
@@ -486,9 +503,19 @@ def list_plans(
 
     stmt = select(TravelRecord).where(TravelRecord.user_id == current_user.id)
     if keyword and keyword.strip():
-        like = f"%{keyword.strip()}%"
+        # 截断超长关键词，并转义 LIKE 通配符（避免 % / _ 扩大匹配范围）
+        escaped = (
+            keyword.strip()[:50]
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+        like = f"%{escaped}%"
         stmt = stmt.where(
-            or_(TravelRecord.title.like(like), TravelRecord.destination.like(like))
+            or_(
+                TravelRecord.title.like(like, escape="\\"),
+                TravelRecord.destination.like(like, escape="\\"),
+            )
         )
 
     total = db.scalar(select(func.count()).select_from(stmt.subquery())) or 0

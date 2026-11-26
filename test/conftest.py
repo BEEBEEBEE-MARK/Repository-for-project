@@ -22,7 +22,7 @@ import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.core.database import Base, SessionLocal, engine  # noqa: E402
-from app.main import app  # noqa: E402
+from app.main import RATE_LIMITER, app  # noqa: E402
 from app.models import InviteCode, TravelRecord, User  # noqa: E402
 from helpers import auth_headers  # noqa: E402
 
@@ -44,6 +44,7 @@ def _clean_tables():
         db.commit()
     finally:
         db.close()
+    RATE_LIMITER.reset()
     yield
 
 
